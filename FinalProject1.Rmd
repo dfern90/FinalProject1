@@ -1,0 +1,110 @@
+---
+title: "NYPD Shooting Incident Report"
+author: "D. Fernandez"
+date: "4/25/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+<p>This is an analysis of the shooting data in New York City from 2006 to 2020. This data was obtained from the [Data.gov](https://catalog.data.gov/dataset) website. We are specifically going to examine the year 2020 and see if the COVID19 pandemic had an affect on the number of shootings in New York. I hypothesize that the number of shootings will be lower, due to the lockdowns across the country.</p> 
+<p>
+First, we examine the shooting data from the year 2019 and then compare them to 2020. We will then look at the entire span from 2006 to 2020 to see if we can see any trends. </p> Let's first set up our data by importing our libraries, importing/tidying the data, and graph our findings:
+</p>
+
+```{r, include = TRUE, message = FALSE, warning = FALSE}
+#Set up the libraries
+library(tidyverse)
+library(lubridate)
+library(scales)
+library(ggplot2)
+
+#Import data from NYC website
+shooting_data <-read_csv("https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv")
+shooting_data19 <-read_csv("https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv")
+shooting_data20 <-read_csv("https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv")
+
+#This block tidy's our CSV date and creates variables shooting_data19, shooting_data_20, and shooting_data
+shooting_data19 <- shooting_data19 %>%
+    mutate(OCCUR_DATE = mdy(OCCUR_DATE))
+shooting_data19 <- shooting_data19 %>% 
+  filter(OCCUR_DATE >= as.Date("2019-01-01") & OCCUR_DATE <= as.Date("2019-12-31"))
+
+shooting_data20 <- shooting_data20 %>%
+    mutate(OCCUR_DATE = mdy(OCCUR_DATE))
+shooting_data20 <- shooting_data20 %>% 
+  filter(OCCUR_DATE >= as.Date("2020-01-01") & OCCUR_DATE <= as.Date("2020-12-31"))
+
+shooting_data <- shooting_data %>%
+    mutate(OCCUR_DATE = mdy(OCCUR_DATE))
+
+#This block declares our variables and trims data
+victim19 <- shooting_data19 %>%      select(OCCUR_DATE, STATISTICAL_MURDER_FLAG,)
+victim19$MONTH <- as.Date(cut(victim19$OCCUR_DATE,
+  breaks = "month"))
+
+victim20 <- shooting_data20 %>%      select(OCCUR_DATE, STATISTICAL_MURDER_FLAG,)
+victim20$MONTH <- as.Date(cut(victim20$OCCUR_DATE,
+  breaks = "month"))
+
+victim <- shooting_data %>%      select(OCCUR_DATE, STATISTICAL_MURDER_FLAG,)
+victim$MONTH <- as.Date(cut(victim$OCCUR_DATE,
+  breaks = "month"))
+```
+
+```{r, include = TRUE, message = FALSE, warning = FALSE}
+#This block shows the total number of shootings for 2019
+v <- ggplot(data=victim19, aes(x=MONTH)) +
+  geom_bar()
+v + ggtitle("Total Shootings in New York in 2019") + xlab("Time") + ylab("Number of Shootings")
+
+#This block shows the total number of shootings for 2020
+v <- ggplot(data=victim20, aes(x=MONTH)) +
+  geom_bar()
+v + ggtitle("Total Shootings in New York in 2020") + xlab("Time") + ylab("Number of Shootings")
+```
+
+#### Observations
+<p>A very surprising result! Our graph indicates that the number of shootings actually went up in 2020 compared to 2019. There were 967 total shootings for 2019 compared to 1,948 for 2020, over double the previous year. This is counter to my original hypothesis that shootings would be lower for 2020. Let us examine the span from 2006 to 2020. This will help us understand if this is part of a larger trend or just an anomaly<p></p></P>
+
+```{r, include = TRUE, message = FALSE, warning = FALSE}
+#This block shows overall shootings from 2006 to the present day
+v <- ggplot(data=victim, aes(x=MONTH)) +
+  geom_bar()
+v + ggtitle("Total Shootings in New York from 2006 to Present") + xlab("Time") + ylab("Number of Shootings")
+```
+
+#### Observations
+<p>Looking at the total shootings, it's now clear that our hypothesis was incorrect. From 2006 to around 2012 the peak number of shootings was anywhere from 200 to 250 in a given month. Additionally, we can see that shootings were on a downward trend with a significant drop in shootings from 2017 to 2020. It can be argued that the COVID19 pandemic caused an increase in the amount of gun violence. Next, let's create a linear regression model that examines the relationship between the total number of shootings and the number of fatal shootings. 
+
+</P></P></P>
+
+## Linear Regression Model
+A linear regression makes the assumption that there exists a linear relationship between two variables. For my model, I wanted to see if there was a relationship between the total number of shootings and fatal shootings. 
+```{r, include = TRUE, message = FALSE, warning = FALSE}
+#This block creates a linear regression model to see if there is a relationship between total shootings and fatal shootings
+df = victim
+df <- table(df$MONTH, df$STATISTICAL_MURDER_FLAG)
+fatalShootings <- df[,2]
+totalShootings <- df[,1] + df[,2]
+newdf <- data.frame(fatalShootings,totalShootings)
+mod = lm(fatalShootings~totalShootings, data = newdf)
+summary(mod)
+plot(totalShootings,fatalShootings)
+abline(lm(fatalShootings~totalShootings))
+```
+
+#### Observations
+
+We can see from the model and the scatterplot that there is a strong relationship between fatal shootings and the total number of shootings. Our p-value is low at 2.2e-16, which indicates that there is strong evidence of statistical significance. We can also observe that our r-squared percent is at 73.88, which indicates high strength of our model. To put it simply, as the total number of shootings go up the number of fatal shootings also goes up.
+
+## Bias
+
+When it comes to this dataset and analysis, there are places where there may be some bias. Bias is a distortion which results in information not being a true representation of the reality we are trying to investigate. It's important for us to look at how a dataset is complied. This one was created by the NYPD. There have been countless allegations of under-reporting crime, racial profiling, and overall corruption over the last few decades. This casts doubt on the precision of our dataset. Sadly, it's not out of the realm of possibility that some shootings may be potentially fabricated or unreported completely. 
+ 
+## Conclusion
+The results found in my analysis ran completely counter to my hypothesis. I thought that the number of shootings would go down during the lockdowns because there would be fewer people congregating in public spaces, which may reduce the number of shootings. Instead, we found that the number of shootings increased to record numbers. I researched this topic further and I discovered that violence in all categories went up during the COVID19 pandemic. One study from UC Davis attributes this increase in violence to extra stress caused by income loss and lack of ability to pay for food/housing during the pandemic. Overall, this analysis was really insightful and it was really interesting to be flat out wrong!
